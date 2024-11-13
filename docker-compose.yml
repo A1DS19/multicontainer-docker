@@ -1,0 +1,65 @@
+services:
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile.dev
+    volumes:
+      - /app/node_modules
+      - ./client:/app
+    depends_on:
+      - api
+  
+  api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.dev
+    restart: always
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - PGUSER=postgres
+      - PGHOST=postgres
+      - PGDATABASE=fibonachi
+      - PGPASSWORD=postgres
+      - PGPORT=5432
+    volumes:
+      - /app/node_modules
+      - ./server:/app
+    depends_on:
+      - postgres
+      - redis
+
+  worker:
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./worker
+    volumes:
+      - /app/node_modules
+      - ./worker:/app
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+  
+  postgres:
+    image: "postgres:17-alpine"
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: fibonachi
+  
+  redis:
+    restart: always
+    image: "redis:7.4.1-alpine"
+  
+  nginx:
+    restart: always
+    image: "nginx:1.27.2-alpine"
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3050:80"
+    depends_on:
+      - client
+      - api
